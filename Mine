@@ -1,0 +1,76 @@
+%% cv_demo.m
+% From A First Course in Machine Learning, Chapter 1.
+% Simon Rogers, 311011 [simon.rogers@glasgow.ac.uk]
+% Revised by Sayyed Mohsen Vazirizade, Oct102017 [smvazirizade@email.arizona.edu]
+% Demonstration of cross-validation for model selection
+clc;clear all;close all;
+rng(1);
+%% Generate some data
+% Generate x between -5 and 5
+N = 100;
+x = 10rand(N,1) - 5;
+t = 5x.^3  - x.^2 + x + 150randn(size(x));
+testx = [-50.015]'; % Large, independent test set
+testt = 5testx.^3 - testx.^2 + testx + 150randn(size(testx));
+
+%% Run a cross-validation over model orders
+maxorder = 7;
+X = [];
+testX = [];
+K = 9 %K-fold CV
+sizes = repmat(floor(NK),1,K);
+sizes(end) = sizes(end) + N - sum(sizes);
+csizes = [0 cumsum(sizes)];
+
+% Note that it is often sensible to permute the data objects before
+% performing CV.  It is not necessary here as x was created randomly.  If
+% it were necessary, the following code would work
+% order = randperm(N);
+% x = x(order); Or X = X(order,) if it is multi-dimensional.
+% t = t(order);
+
+for k = 0maxorder
+    X = [X x.^k];
+    testX = [testX testx.^k];
+    for fold = 1K
+        % Partition the data
+        % foldX contains the data for just one fold
+        % trainX contains all other data
+     
+        foldX = X(csizes(fold)+1csizes(fold+1),);
+        trainX = X;
+        trainX(csizes(fold)+1csizes(fold+1),) = [];
+        foldt = t(csizes(fold)+1csizes(fold+1));
+        traint = t;
+        traint(csizes(fold)+1csizes(fold+1)) = [];     
+
+        w = (trainX'trainX)trainX'traint;
+        fold_pred = foldXw;
+        cv_loss(fold,k+1) = mean((fold_pred-foldt).^2);
+        ind_pred = testXw;
+        ind_loss(fold,k+1) = mean((ind_pred - testt).^2);
+        train_pred = trainXw;
+        train_loss(fold,k+1) = mean((train_pred - traint).^2);
+    end
+end
+
+%% Plot the results
+figure(1);
+subplot(131)
+plot(0maxorder,mean(cv_loss,1),'linewidth',2)
+xlabel('Model Order');
+ylabel('Loss');
+title('CV Loss');
+ylim(1.2[0,max(max(max(mean(cv_loss,1),mean(train_loss,1)),mean(ind_loss,1)))])
+subplot(132)
+plot(0maxorder,mean(train_loss,1),'linewidth',2)
+xlabel('Model Order');
+ylabel('Loss');
+title('Train Loss');
+ylim(1.2[0,max(max(max(mean(cv_loss,1),mean(train_loss,1)),mean(ind_loss,1)))])
+subplot(133)
+plot(0maxorder,mean(ind_loss,1),'linewidth',2)
+xlabel('Model Order');
+ylabel('Loss');
+title('Independent Test Loss')
+ylim(1.2[0,max(max(max(mean(cv_loss,1),mean(train_loss,1)),mean(ind_loss,1)))])
